@@ -3,21 +3,13 @@ list.of.packages <- c("readxl", "rJava")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages, repos = "https://ftp.acc.umu.se/mirror/CRAN/")
 library("readxl")
-# library("xlsx")
+
+# dirs <- list.dirs(".", full.names = TRUE);
+# dirs <- dirs[grepl("Snow Data", dirs)]
+
 files <- list.files("IButtoon Data", full.names = TRUE);
 files <- files[grepl("Nuolja", files)];
-# files <- files[grepl(" 4 2018.09.28 to 2019.09.27", files)];
-# files <- files[grepl("36|37|38|39", files)];
-# files <- files[grepl("45 2018.09.28 to 2019.09.27.xlsx", files)];
-# files <- files[grepl("57", files)];
-# files <- files[grepl("63", files)];
-# files <- files[grepl("36", files)];
-# files <- files[grepl("32", files)];
-# files <- files[grepl("32|36|37|57|63|71", files)];
-# files <- files[grepl("37", files)];
-# files <- files[grepl("71", files)];
-# files <- files[grepl("Pole 7 2018.09.28 to 2019", files)];
-# files
+# files <- files[grepl("21|39|49", files)]
 
 formats <- c("%m/%d/%y %I:%M:%OS %p", 
 	     "%m/%d/%Y %H:%M", 
@@ -139,40 +131,47 @@ fileDate <- function(fileName){
 
 files <- lapply(files, function(file){
 			res <- list(file, fileDate(file));
-			return(res)})
+			return(res)
+	     })
 
 years <- sapply(files, function(file){
 			return(file[[2]]$end$year +1900)
-			});
-year <- NA;
-while(!(year %in% years)){
-	cat("available years", sep="\n");
-	if(length(unique(delist(years))) > 1){
-		cat(unique(delist(years)), sep="\n")
-		cat("choose year: ");
-		year <- as.numeric(readLines(file("stdin"), n = 1L));
-	}else{
-		year <- unique(delist(years))[1];
-		cat("Only one option", sep="\n");
-	}
+	     });
+outPutFileName = NA;
+noChange = 5;
+while(is.na(outPutFileName)){
+	cat("Year coverage: ", "\n")
+	cat(unique(years), "\n")
+	cat("Name output file [default: IButton_Nuolja_output]: ");
+	con <- file("stdin");
+	outPutFileName <- readLines(con, n = 1L);
+	if(is.na(outPutFileName)) outPutFileName <- "IButton_Nuolja_output";
+	# cat("number of not changed entries to flag if indoors [default: 5]: ");
+	# noChange <- as.numeric(readLines(con, n = 1L));
+	# if(is.na(noChange)) noChange <- 5; 
+	close(con)
 }
-
-files <- files[years %in% year]
 
 readFiles <- sapply(files, 
 		    function(fileV){
 			    file <- fileV[[1]]
 			    date <- fileV[[2]]
 			    cat(file, sep="\n");
-			    mydf <- as.matrix(read_xlsx(file, cell_limits(c(4, 1), c(NA, 5)), sheet = 1, col_types = c("numeric", "list", "text", "numeric", "numeric")));
-			    dec <- delist(mydf[,5]);
-			    if(any(!is.na(dec))){
-				    for(i in 0:nrow(mydf)){
-					    value = as.numeric(dec[i])
-					    if(value < 10 && length(value) && !is.na(value) != 0) mydf[i,4] <- as.numeric(mydf[i,4]) + (value/10)
+			    mydf <- as.matrix(read_xlsx(file, cell_limits(c(4, 1), c(NA, 4)), sheet = 1, col_types = c("numeric", "list", "text", "text")));
+			    mydf[,4] <- gsub("[^0-9.-]", "", delist(mydf[,4]))
+
+			    dec <- as.matrix(read_xlsx(file, cell_limits(c(4, 5), 
+									 c(nrow(mydf)+4, 5)), sheet = 1, col_types = c("list")));
+			    dec <- gsub("[^0-9.-]", "", delist(dec))
+			    if(length(dec) > 0){
+				    for(i in 1:nrow(mydf)){
+					    x = as.numeric(dec[i])
+					    if(!is.na(x)){
+
+						    mydf[i,4] = delist(as.numeric(delist(mydf[i,4])) + x/10)
+					    }
 				    }
 			    }
-			    mydf <- mydf[,-5];
 			    mydf[,2] <- recur(mydf[,2], date);
 			    return(mydf)
 		    })
@@ -189,10 +188,12 @@ for(file in readFiles){
 		combFile = rbind(combFile, file);
 	}
 }
+
 combFile[,1] <- delist(combFile[,1]);
 combFile[,2] <- delist(combFile[,2]);
 combFile[,3] <- delist(combFile[,3]);
 combFile[,4] <- delist(combFile[,4]);
 
-write.csv(data.frame(combFile), paste("Nuolja_", paste(year, ".csv", sep=""), sep=""));
+write.csv(data.frame(combFile), paste(outPutFileName, ".csv", sep=""));
 cat("Wrote to file", sep="\n")
+warnings()
