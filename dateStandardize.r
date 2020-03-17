@@ -7,6 +7,7 @@ library("readxl")
 formats <- c("%m/%d/%y %I:%M:%OS %p", 
 	     "%m/%d/%Y %H:%M", 
 	     "%Y-%m-%d %H:%M:%OS", 
+	     "%Y-%m-%d", 
 	     "%d-%m-%y %H:%M:%OS",
 	     "%d.%m.%y %H:%M:%OS",
 	     "%d/%m/%y %H:%M",
@@ -32,7 +33,6 @@ specialCase <- function(entry, format){
 }
 
 alter <- function(entry){
-	# print(entry)
 	values <- lapply(formats, function(x){return(strptime(entry, x))})
 	str <- substring(as.character(delist(entry)), 3)
 	erEntry1 = specialCase(str, "%d-%m-%y %H:%M:%OS");
@@ -46,6 +46,7 @@ alter <- function(entry){
 	str1 <- paste(str1, str2, sep="");
 	str <- paste(str1, arr[2])
 	erEntry5 = specialCase(str, "%d-%y-%m %H:%M:%OS");
+
 	values[length(values)+1] <- list(erEntry1);
 	values[length(values)+1] <- list(erEntry2);
 	values[length(values)+1] <- list(erEntry4);
@@ -58,32 +59,32 @@ alter <- function(entry){
 
 recur <- function(entries, date){
 	start <- date$start;
-	# start <- strptime(date$start, "%Y.%m.%d");
 	end <- date$end;
-	# end <- strptime(date$end, "%Y.%m.%d");
 	period <- difftime(date$start, date$end);
 	corrected <- {};
 	previous <- start;
 	for(i in 1:length(entries)){
 		opt = alter(entries[[i]]);
+		debug = opt;
 		opt = opt[sapply(opt, function(x){
-					 return(x$year == start$year || x$year == end$year)
+					 return(abs(x$year - start$year) <= 1 )
 	     })]
 		if(length(opt) > 1) {
-			alt <- sapply(opt, function(x){
-					      bool <- FALSE;
-					      if(i > 1){
-						      startDif = difftime(x, delist(previous), units="day")
-						      bool <- startDif > 0
-					      }else{
-						      start = abs(difftime(x, date$start, units="day")) 
-						      end = abs(difftime(x, date$end, units="day"))
-						      bool <- abs(start + end) - abs(period) == 0;  
-					      }
-					      return(bool)
-	     })
-
-			opt = opt[alt];
+			# alt <- sapply(opt, function(x){
+			# 		      bool <- FALSE;
+			# 		      if(i > 1){
+			# 			      startDif = difftime(x, delist(previous), units="day")
+			# 			      bool <- startDif > 0
+			# 		      }else{
+			# 			      start = abs(difftime(x, date$start, units="day")) 
+			# 			      end = abs(difftime(x, date$end, units="day"))
+			# 			      bool <- abs(start + end) - abs(period) == 0;  
+			# 		      }
+			# 		      return(bool)
+	     # })
+			# print(opt)
+			# opt = opt[alt];
+			# print(opt)
 			if(length(opt) > 1){
 				opt <- unique(opt);
 			}
@@ -96,7 +97,11 @@ recur <- function(entries, date){
 			}
 		}
 		if(length(opt) < 1){
-			cat(paste("Row number ", i+4))
+			cat(paste("Row number ", i+4), "\n")
+			print(date)
+			print(entries[[i]])
+			print(debug)
+			print(opt)
 			stop("ERROR missing Options")
 		}
 		if(is.na(opt)){
@@ -111,59 +116,75 @@ recur <- function(entries, date){
 
 fileDate <- function(fileName){
 	tmp <- strsplit(fileName, " to ");
-	start <- substring(tmp[[1]][1], 38)
-	start <- strptime(start, "%Y.%m.%d");
+	start <- substring(tmp[[1]][1], 57)
+	start <- strptime(start, "%Y%m%d");
 	if(start$year < 0) start$year <- start$year + 2000;
 	end <- substring(tmp[[1]][2], 1, 10)
-	end <- strptime(end, "%Y.%m.%d");
+	end <- strptime(end, "%Y%m%d");
 	date <- {};
 	date$end <- end;
 	date$start <- start;
 	return(date)			
 }
 
-outPutFileName = NA;
+outputFileName = NA;
 noChange = 5;
-directory = "IButtoon Data";
-filePattern = "Nuolja";
+directory = NA;
+filePattern = NA;
 files = NA;
-while(is.na(outPutFileName)){
-	cat(paste("Data location directory [default: ", paste(directory, "] : ")));
+while(is.na(directory)){
+	allDirs <- list.dirs(path = ".", full.names = FALSE, recursive = FALSE);
+	print(allDirs);
+	cat(paste("Data location directory: "));
 	con <- file("stdin");
 	tmp <- readLines(con, n = 1L);
-	if(!is.na(tmp)) tmp <- directory;
-	directory <- tmp
+	if(!is.na(tmp)){
+		directory <- allDirs[as.numeric(tmp)]
+		cat(paste("Selected:", directory), "\n")
+	} 
 	close(con)
-	
+};	
+while(length(files) == 0 || is.na(files)){
 	files <- list.files(directory, full.names = TRUE);
-	cat("Files in directory [y/n]: ")
+	cat("No filter All files in Directory [y/n]: ")
 	con <- file("stdin");
-	tmp <- readLines(con, n = 1L);
-	if(tmp %in% "y") cat(files);
+	res <- readLines(con, n = 1L);
 	close(con)
+	if(res %in% "n" || res %in% ""){
+		cat("Files in directory [y/n]: ")
+		con <- file("stdin");
+		tmp <- readLines(con, n = 1L);
+		if(tmp %in% "y") cat(files);
+		close(con)
 
-	cat(paste("File pattern [default: ", paste(filePattern, "] : ")));
-	con <- file("stdin");
-	tmp <- readLines(con, n = 1L);
-	if(!is.na(tmp)) tmp <- filePattern;
-	filePattern <- tmp;
-	close(con)
+		cat(paste("File pattern [ Nuolja ] : "));
+		con <- file("stdin");
+		filePattern <- readLines(con, n = 1L);
+		if(!is.na(filePattern)) filePattern <- "Nuolja"
+		close(con)
 
-	files <- files[grepl(filePattern, files)];
-	
-	files <- lapply(files, function(file){
+		files <- files[grepl(filePattern, files)];
+
+		if(length(files) == 0) files = NA;
+	}
+}
+# files <- files[grepl("20180524_20180928 Excel Complete/Noulja iButton Pole 25 20180621 to 20181110.xlsx", files)];
+files <- lapply(files, function(file){
 			res <- list(file, fileDate(file));
 			return(res)
-	})
-	years <- sapply(files, function(file){
-		return(file[[2]]$end$year +1900)
-	});
+	     })
+years <- sapply(files, function(file){
+			return(file[[2]]$end$year +1900)
+	     });
+while(is.na(outputFileName)){
 	cat("Year coverage: ", "\n")
 	cat(unique(years), "\n")
-	cat("Name output file [default: IButton_Nuolja_output] : ");
+
+	outputFileName <- directory;
+	cat("Name output file [default:  directory name] : ");
 	con <- file("stdin");
-	outPutFileName <- readLines(con, n = 1L);
-	if(is.na(outPutFileName) || outPutFileName %in% "") outPutFileName <- "IButton_Nuolja_output";
+	outputFileName <- readLines(con, n = 1L);
+	if(is.na(outputFileName) || outputFileName %in% "") outputFileName <- directory 
 	close(con)
 }
 
@@ -210,6 +231,6 @@ combFile[,1] <- delist(combFile[,1]);
 combFile[,2] <- delist(combFile[,2]);
 combFile[,3] <- delist(combFile[,3]);
 combFile[,4] <- delist(combFile[,4]);
-write.csv(data.frame(combFile), paste(outPutFileName, ".csv", sep=""));
+write.csv(data.frame(combFile), paste(outputFileName, ".csv", sep=""));
 cat("Wrote to file", sep="\n")
 warnings()
