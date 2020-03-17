@@ -7,9 +7,6 @@ library("readxl")
 # dirs <- list.dirs(".", full.names = TRUE);
 # dirs <- dirs[grepl("Snow Data", dirs)]
 
-files <- list.files("IButtoon Data", full.names = TRUE);
-files <- files[grepl("Nuolja", files)];
-# files <- files[grepl("21|39|49", files)]
 
 formats <- c("%m/%d/%y %I:%M:%OS %p", 
 	     "%m/%d/%Y %H:%M", 
@@ -129,28 +126,53 @@ fileDate <- function(fileName){
 	return(date)			
 }
 
-files <- lapply(files, function(file){
-			res <- list(file, fileDate(file));
-			return(res)
-	     })
-
-years <- sapply(files, function(file){
-			return(file[[2]]$end$year +1900)
-	     });
 outPutFileName = NA;
 noChange = 5;
+directory = "IButtoon Data";
+filePattern = "Nuolja";
+files = NA;
 while(is.na(outPutFileName)){
+	
+	cat(paste("Data location directory [default: ", paste(directory, "] : ")));
+	con <- file("stdin");
+	tmp <- readLines(con, n = 1L);
+	if(!is.na(tmp)) tmp <- directory;
+	directory <- tmp
+	close(con)
+	
+	files <- list.files(directory, full.names = TRUE);
+	cat("Files in directory [y/n]: ")
+	con <- file("stdin");
+	tmp <- readLines(con, n = 1L);
+	if(tmp %in% "y") cat(files);
+	close(con)
+
+	cat(paste("File pattern [default: ", paste(filePattern, "] : ")));
+	con <- file("stdin");
+	tmp <- readLines(con, n = 1L);
+	if(!is.na(tmp)) tmp <- filePattern;
+	filePattern <- tmp;
+	close(con)
+
+	files <- files[grepl(filePattern, files)];
+	
+	files <- lapply(files, function(file){
+			res <- list(file, fileDate(file));
+			return(res)
+	})
+	years <- sapply(files, function(file){
+		return(file[[2]]$end$year +1900)
+	});
 	cat("Year coverage: ", "\n")
 	cat(unique(years), "\n")
-	cat("Name output file [default: IButton_Nuolja_output]: ");
+	cat("Name output file [default: IButton_Nuolja_output] : ");
 	con <- file("stdin");
 	outPutFileName <- readLines(con, n = 1L);
 	if(is.na(outPutFileName)) outPutFileName <- "IButton_Nuolja_output";
-	# cat("number of not changed entries to flag if indoors [default: 5]: ");
-	# noChange <- as.numeric(readLines(con, n = 1L));
-	# if(is.na(noChange)) noChange <- 5; 
 	close(con)
 }
+
+
 
 readFiles <- sapply(files, 
 		    function(fileV){
