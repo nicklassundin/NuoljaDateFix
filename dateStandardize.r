@@ -3,7 +3,6 @@ new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"
 if(length(new.packages)) install.packages(new.packages, repos = "https://ftp.acc.umu.se/mirror/CRAN/")
 library("readxl")
 
-
 formats <- c("%m/%d/%y %I:%M:%OS %p", 
 	     "%m/%d/%Y %H:%M", 
 	     "%Y-%m-%d %H:%M:%OS", 
@@ -66,17 +65,19 @@ recur <- function(entries, date){
 	previous <- start;
 	for(i in 1:length(entries)){
 		opt = alter(entries[[i]]);
-		debug = opt;
 		opt = opt[sapply(opt, function(x){
-					 return(abs(x$year - start$year) <= 1 )
+					 isStart = abs(x$year - start$year) <= 1 
+					 isEnd = abs(x$year - end$year) <= 1
+					 return(isStart && (isEnd || is.na(isEnd)))
 	     })]
+		debug = opt;
 		if(length(opt) > 1) {
 			if(length(opt) > 1){
 				opt <- unique(opt);
 			}
 			if(length(opt) > 1){
 				alt <- sapply(opt, function(x){
-						      return(floor(difftime(x, delist(previous), units="day")))
+						      return(abs(floor(difftime(x, delist(previous), units="day"))))
 
 	     })			
 				opt <- opt[alt == min(alt)];
@@ -98,8 +99,10 @@ recur <- function(entries, date){
 			print(opt)
 			stop("ERROR missing Options")
 		}
-		if(is.na(opt)){
+		if(is.na(opt)|| "NULL" %in% opt || "" == opt){
 			cat(paste("Row number ", i+4))
+			print(debug)
+			print(opt)
 			stop("ERROR is NA")
 		}
 		previous = opt;
@@ -161,8 +164,9 @@ while(length(files) == 0 || is.na(files)){
 
 		if(length(files) == 0) files = NA;
 	}
+	# files <- files[grepl("Pole 18|Pole 17", files)];
+	# files <- files[grepl("Pole 18", files)];
 }
-# files <- files[grepl("20180524_20180928 Excel Complete/Noulja iButton Pole 25 20180621 to 20181110.xlsx", files)];
 files <- lapply(files, function(file){
 			res <- list(file, fileDate(file));
 			return(res)
