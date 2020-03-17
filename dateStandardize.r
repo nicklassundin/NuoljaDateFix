@@ -44,13 +44,14 @@ alter <- function(entry){
 	str1 <- substring(arr[1], 0, nchar(arr[1])-4);
 	str2 <- substring(arr[1], nchar(arr[1])-1, nchar(arr[1]))
 	str1 <- paste(str1, str2, sep="");
-	str <- paste(str1, arr[2])
-	erEntry5 = specialCase(str, "%d-%y-%m %H:%M:%OS");
-
+	erEntry5 = specialCase(paste(str1, arr[2]), "%d-%y-%m %H:%M:%OS");
+	
 	values[length(values)+1] <- list(erEntry1);
 	values[length(values)+1] <- list(erEntry2);
 	values[length(values)+1] <- list(erEntry4);
 	values[length(values)+1] <- list(erEntry5);
+	values[length(values)+1] <- list(specialCase(substring(str, 4), "%y-%d-%m"));
+
 	alt <- lapply(values, function(x){return(!is.na(x))})
 	values = values[unlist(alt)];
 	return(values)
@@ -70,30 +71,23 @@ recur <- function(entries, date){
 					 return(abs(x$year - start$year) <= 1 )
 	     })]
 		if(length(opt) > 1) {
-			# alt <- sapply(opt, function(x){
-			# 		      bool <- FALSE;
-			# 		      if(i > 1){
-			# 			      startDif = difftime(x, delist(previous), units="day")
-			# 			      bool <- startDif > 0
-			# 		      }else{
-			# 			      start = abs(difftime(x, date$start, units="day")) 
-			# 			      end = abs(difftime(x, date$end, units="day"))
-			# 			      bool <- abs(start + end) - abs(period) == 0;  
-			# 		      }
-			# 		      return(bool)
-	     # })
-			# print(opt)
-			# opt = opt[alt];
-			# print(opt)
 			if(length(opt) > 1){
 				opt <- unique(opt);
 			}
 			if(length(opt) > 1){
 				alt <- sapply(opt, function(x){
-						      return(difftime(x, delist(previous), units="day"))
+						      return(floor(difftime(x, delist(previous), units="day")))
 
 	     })			
 				opt <- opt[alt == min(alt)];
+			}
+			if(length(opt) > 1){
+				alt <- sapply(opt, function(x){
+						      return(0 != (x$hour + x$min))
+	     })
+				if(length(opt[alt]) > 0){
+					opt <- opt[alt];
+				}
 			}
 		}
 		if(length(opt) < 1){
@@ -227,10 +221,23 @@ for(file in readFiles){
 	}
 }
 
+
 combFile[,1] <- delist(combFile[,1]);
 combFile[,2] <- delist(combFile[,2]);
 combFile[,3] <- delist(combFile[,3]);
 combFile[,4] <- delist(combFile[,4]);
+
+date <- sapply(combFile[,2], function(x){
+			   value = strsplit(x, " ")[[1]];
+		     return(as.character(value[1]))
+		    });
+combFile <- cbind(combFile, date);
+time <- sapply(combFile[,2], function(x){
+			   value = strsplit(x, " ")[[1]];
+		     return(as.character(value[2]))
+		    });
+combFile <- cbind(combFile, time);
+
 write.csv(data.frame(combFile), paste(outputFileName, ".csv", sep=""));
 cat("Wrote to file", sep="\n")
 warnings()
