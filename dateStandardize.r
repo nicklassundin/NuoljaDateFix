@@ -1,11 +1,7 @@
 list.of.packages <- c("readxl", "rJava")
-# list.of.packages <- c("xlsx", "rJava")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages, repos = "https://ftp.acc.umu.se/mirror/CRAN/")
 library("readxl")
-
-# dirs <- list.dirs(".", full.names = TRUE);
-# dirs <- dirs[grepl("Snow Data", dirs)]
 
 
 formats <- c("%m/%d/%y %I:%M:%OS %p", 
@@ -132,7 +128,6 @@ directory = "IButtoon Data";
 filePattern = "Nuolja";
 files = NA;
 while(is.na(outPutFileName)){
-	
 	cat(paste("Data location directory [default: ", paste(directory, "] : ")));
 	con <- file("stdin");
 	tmp <- readLines(con, n = 1L);
@@ -168,7 +163,7 @@ while(is.na(outPutFileName)){
 	cat("Name output file [default: IButton_Nuolja_output] : ");
 	con <- file("stdin");
 	outPutFileName <- readLines(con, n = 1L);
-	if(is.na(outPutFileName)) outPutFileName <- "IButton_Nuolja_output";
+	if(is.na(outPutFileName) || outPutFileName %in% "") outPutFileName <- "IButton_Nuolja_output";
 	close(con)
 }
 
@@ -215,7 +210,6 @@ combFile[,1] <- delist(combFile[,1]);
 combFile[,2] <- delist(combFile[,2]);
 combFile[,3] <- delist(combFile[,3]);
 combFile[,4] <- delist(combFile[,4]);
-
 write.csv(data.frame(combFile), paste(outPutFileName, ".csv", sep=""));
 cat("Wrote to file", sep="\n")
 warnings()
