@@ -193,6 +193,8 @@ readFiles <- sapply(files,
 			    file <- fileV[[1]]
 			    date <- fileV[[2]]
 			    cat(file, sep="\n");
+			    meta <- c(as.matrix(read_xlsx(file, cell_limits(c(1, 1), c(2, 1)), sheet = 1, col_names = FALSE)));
+
 			    mydf <- as.matrix(read_xlsx(file, cell_limits(c(4, 1), c(NA, 4)), sheet = 1, col_types = c("numeric", "list", "text", "text")));
 			    mydf[,4] <- gsub("[^0-9.-]", "", delist(mydf[,4]))
 
@@ -209,6 +211,8 @@ readFiles <- sapply(files,
 				    }
 			    }
 			    mydf[,2] <- recur(mydf[,2], date);
+			    mydf <- cbind(rep(strsplit(meta[1], " ")[[1]][4], nrow(mydf)), mydf);
+			    mydf <- cbind(rep(strsplit(meta[2], " ")[[1]][4], nrow(mydf)), mydf);
 			    return(mydf)
 		    })
 
@@ -218,9 +222,9 @@ for(file in readFiles){
 	if(first){
 		first <- FALSE;
 		combFile = data.frame(file);
-		colnames(combFile) <- c("Pole", "Date/Time", "Unit", "Value");
+		colnames(combFile) <- c("Registration Number", "Part Number","Pole", "Date/Time", "Unit", "Value");
 	}else{
-		colnames(file) <- c("Pole", "Date/Time", "Unit", "Value");
+		colnames(file) <- c("Registration Number", "Part Number","Pole", "Date/Time", "Unit", "Value");
 		combFile = rbind(combFile, file);
 	}
 }
@@ -230,13 +234,15 @@ combFile[,1] <- delist(combFile[,1]);
 combFile[,2] <- delist(combFile[,2]);
 combFile[,3] <- delist(combFile[,3]);
 combFile[,4] <- delist(combFile[,4]);
+combFile[,5] <- delist(combFile[,5]);
+combFile[,6] <- delist(combFile[,6]);
 
-date <- sapply(combFile[,2], function(x){
+date <- sapply(combFile[,4], function(x){
 			   value = strsplit(x, " ")[[1]];
 		     return(as.character(value[1]))
 		    });
 combFile <- cbind(combFile, date);
-time <- sapply(combFile[,2], function(x){
+time <- sapply(combFile[,4], function(x){
 			   value = strsplit(x, " ")[[1]];
 		     return(as.character(value[2]))
 		    });
